@@ -5,4 +5,3 @@
 choose group& type your name and click the connect button.
 
 ![alt text](https://github.com/melihyilman/SignalRChat.Blazor/blob/main/signalRChat.png)
-![alt text](https://github.com/melihyilman/SignalRChat.Blazor/blob/main/signalRChat_2.png)
