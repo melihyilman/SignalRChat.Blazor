@@ -7,6 +7,6 @@ dotnet run
 ```
 ![alt text](https://github.com/melihyilman/SignalRChat.Blazor/blob/main/photo0.png)
 
-choose group& type your name and click the connect button.
+- Choose group& type your name and click the connect button.
 
 ![alt text](https://github.com/melihyilman/SignalRChat.Blazor/blob/main/signalRChat.png)
