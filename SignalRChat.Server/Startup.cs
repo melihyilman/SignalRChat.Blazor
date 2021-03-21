@@ -63,12 +63,9 @@ namespace SignalRChat.Server
 
             app.UseEndpoints(endpoints =>
             {
-                //endpoints.MapDefaultControllerRoute();
                 endpoints.MapHub<ChatHub>(Client.Data.ChatClient.HubUri);
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapBlazorHub();
-                
-                //endpoints.MapFallbackToPage("/_Host");
             });
 
         }
