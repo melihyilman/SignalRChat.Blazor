@@ -1,0 +1,222 @@
+﻿@page "/"
+@inject NavigationManager navigationManager
+@implements IDisposable
+@using SignalRChat.Client.Data
+@using SignalRChat.Shared.Models
+
+
+@if (!chatting)
+{
+    <ul class="flex-column text-white">
+        @foreach (var groupName in Messages.GroupNames)
+        {
+            <li id="group1">
+                <button class="btn btn-outline-success btn-block" @onclick="() => SetSelectedGroup(groupName)">@groupName</button>
+            </li>
+        }
+
+    </ul>
+
+}
+<div class="top-row px-4">
+    @if (chatting)
+    {
+        <p>Connected User : <b>@username</b></p>
+        <button class="btn btn-sm btn-warning ml-md-auto" @onclick="@DisconnectAsync">Disconnect</button>
+    }
+</div>
+
+<div class="content px-4">
+
+    @if (!chatting)
+    {
+        <h2>Chat (@GroupName)</h2>
+        <p>Enter your name to start..</p>
+        <input type="text" maxlength="20" @bind="@username" />
+        <button class="btn btn-outline-dark" @onclick="@Chat"><span class="oi oi-chat" aria-hidden="true">Connect!</span></button>
+        @if (message != null)
+        {
+            <div class="invalid-feedback">@message</div>
+            <small id="emailHelp" class="form-text text-muted">@message</small>
+        }
+    }
+    @if (chatting)
+    {
+        <div class="row">
+            <div class="card col-3">
+                <ul>
+                    Online Users (@GroupName):
+                    @foreach (var user in users)
+                    {
+                        <li>@user</li>
+                    }
+                </ul>
+            </div>
+            <div id="scrollbox" class="col-9">
+                @foreach (var item in messages)
+                {
+                    <div class="@item.CSS p-2 message">
+                        <div class="">
+                            <div class="smaller-text">@item.Username</div>
+                            <div class="user">@item.Body</div>
+
+                        </div>
+
+
+                    </div>
+                }
+                <textarea class="form-control" placeholder="Send Message" @bind="@newMessage"></textarea>
+                <button class="btn btn-outline-dark" @onclick="@SendAsync">Send</button>
+            </div>
+        </div>
+    }
+
+</div>
+@functions {
+    public void Dispose()
+    {
+        //for notify other users disconnect on page close
+        if (client != null) DisconnectAsync();
+    }
+}
+@code{
+    bool chatting = false;
+    string username = null;
+    string GroupName = "Group0";
+    ChatClient client = null;
+    string message = null;
+    string newMessage = null;
+    List<Message> messages = new List<Message>();
+    List<string> users = new List<string>();
+
+    async Task Chat()
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            message = "Please enter a name";
+            return;
+        }
+        try
+        {
+            messages.Clear();
+            client = new ChatClient(GroupName, username, navigationManager);
+
+            client.MessageReceived += MessageReceived;
+            client.OnlineUsers += SetOnlineUsers;
+            client.UserConnected += UserConnected;
+            client.UserDisconnected += UserDisconnected;
+            client.MessageList += GetMessageList;
+            Console.WriteLine("starting..");
+            await client.StartAsync();
+            Console.WriteLine("started..");
+
+            chatting = true;
+        }
+        catch (Exception ex)
+        {
+
+            message = $"[!Err] Failed to start chat -> {ex.Message} ";
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+    void MessageReceived(object sender, MessageReceivedEventArgs args)
+    {
+        Console.WriteLine($"{args.UserName}: -> {args.Message}");
+
+        var mine = isMine(args.UserName);
+        var newMsg = new Message(args.UserName, args.Message, mine);
+        messages.Add(newMsg);
+
+        StateHasChanged();
+    }
+    bool isMine(string senderUserName)
+    {
+        var isMine = false;
+        if (!string.IsNullOrWhiteSpace(senderUserName))
+        {
+            isMine = string.Equals(senderUserName, username, StringComparison.OrdinalIgnoreCase);
+        }
+        return isMine;
+    }
+    void SetOnlineUsers(object sender, List<string> userList)
+    {
+        Console.WriteLine($"{userList}");
+        users = userList;
+        StateHasChanged();
+    }
+    void GetMessageList(object sender, List<Chat> messageList)
+    {
+
+        foreach (var messageItem in messageList.OrderBy(x=>x.SendDate))
+        {
+            var mine = isMine(messageItem.SenderName);
+            var newMsg = new Message(messageItem.SenderName, messageItem.SenderMessage, mine);
+            messages.Add(newMsg);
+        }
+        StateHasChanged();
+    }
+    void UserDisconnected(object sender, string UserName)
+    {
+        if (users.Contains(UserName))
+            users.Remove(UserName);
+        NotifyOtherUsers(UserName, $"User Disconnected ({UserName})");
+
+        StateHasChanged();
+    }
+    void UserConnected(object sender, string UserName)
+    {
+        users.Add(UserName);
+        NotifyOtherUsers(UserName, $"User Connected ({UserName})");
+        StateHasChanged();
+    }
+    void NotifyOtherUsers(string userName, string message)
+    {
+        var newMsg = new Message(userName, message, false);
+        messages.Add(newMsg);
+
+    }
+    public async Task DisconnectAsync()
+    {
+        if (chatting)
+        {
+            await client.StopAsync();
+            client = null;
+            message = "quit";
+            chatting = false;
+        }
+    }
+    async Task SendAsync()
+    {
+        if (chatting && !string.IsNullOrWhiteSpace(newMessage))
+        {
+            await client.SendAsync(newMessage);
+            newMessage = "";
+        }
+    }
+    class Message
+    {
+        public Message(string username, string body, bool mine)
+        {
+            Username = username; Body = body; Mine = mine;
+        }
+        public string Username { get; set; }
+        public string Body { get; set; }
+        public bool Mine { get; set; }
+        public string CSS
+        {
+            get
+            {
+                return Mine ? "sent" : "received";
+            }
+        }
+    }
+
+
+    public void SetSelectedGroup(string val)
+    {
+        GroupName = val;
+        StateHasChanged();
+    }
+
+}

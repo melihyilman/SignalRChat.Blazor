@@ -1,0 +1,36 @@
+﻿
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">SignalRChat.Client</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="content px-4">
+    <h1>Chat App Group (@SelectedGroup)</h1>
+    <textarea @bind="@SelectedGroup"></textarea>
+    </div>
+
+    @code {
+
+        public string SelectedGroup { get; set; } = "Group0";
+        //private static string selectedGroup;
+        //public static string SelectedGroup
+        //{
+        //    get { return selectedGroup; }
+        //    set { selectedGroup = value; NotifyPropertyChanged(() => SelectedGroup); }
+        //}
+        public void SetSelectedGroup(int val)
+        {
+            SelectedGroup = $"Group{val}";
+            StateHasChanged();
+        }
+        private bool collapseNavMenu = true;
+
+        private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+        private void ToggleNavMenu()
+        {
+            collapseNavMenu = !collapseNavMenu;
+        }
+    }
